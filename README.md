@@ -12,9 +12,7 @@ yt --transcript 'https://www.youtube.com/watch?v=0W7RGCTnoJ0' | fabric -rp creat
 4. Risk shifts.
 
 5. Caution.
-
 ------
-
 yt --transcript 'https://youtu.be/_pa0A-gOGXM?si=3QJ9BZ5uFHOkLx5e' | fabric -rp create_5_sentence_summary
 
 5 Levels
@@ -27,9 +25,9 @@ yt --transcript 'https://youtu.be/_pa0A-gOGXM?si=3QJ9BZ5uFHOkLx5e' | fabric -rp 
 4. Time decay
 
 5. Decay
-
 ------
-yt --transcript 'https://youtu.be/_pa0A-gOGXM?si=3QJ9BZ5uFHOkLx5e' | fabric -rp  analyze_claims 
+yt --transcript 'https://youtu.be/_pa0A-gOGXM?si=3QJ9BZ5uFHOkLx5e' | fabric -rp  analyze_claims
+
 ARGUMENT SUMMARY:
 The transcript explains an advanced zero DTE options strategy using a short put vertical spread, detailing how the system works, its risk management, and related technical implementation.
 
