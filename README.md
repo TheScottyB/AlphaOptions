@@ -277,6 +277,7 @@ yt --transcript 'https://www.youtube.com/watch?v=8G4Ueaagfcg' | fabric -rp extra
 -------
 
 yt --transcript 'https://www.youtube.com/watch?v=xABvHplswmsQ' | fabric -rp summarize
+
 ONE SENTENCE SUMMARY:
 S&P 500 and NASDAQ exhibit persistent downtrends with bearish divergences as technical backtesting shows volatile trade outcomes and investor sentiment.
 
