@@ -15,6 +15,100 @@ yt --transcript 'https://www.youtube.com/watch?v=0W7RGCTnoJ0' | fabric -rp creat
 
 ------
 
+yt --transcript 'https://youtu.be/_pa0A-gOGXM?si=3QJ9BZ5uFHOkLx5e' | fabric -rp create_5_sentence_summary
+
+5 Levels
+1. Automated zero-DTE vertical spread strategy
+
+2. Precise algorithmic option execution
+
+3. Timed risk management
+
+4. Time decay
+
+5. Decay
+
+------
+yt --transcript 'https://youtu.be/_pa0A-gOGXM?si=3QJ9BZ5uFHOkLx5e' | fabric -rp  analyze_claims 
+ARGUMENT SUMMARY:
+The transcript explains an advanced zero DTE options strategy using a short put vertical spread, detailing how the system works, its risk management, and related technical implementation.
+
+─────────────────────────────
+
+TRUTH CLAIMS:
+
+1. CLAIM: Zero DTE options have minimal overnight risk and intense time decay.
+   • CLAIM SUPPORT EVIDENCE:
+     – Investopedia explains that options expiring on the same day experience rapid time decay (“theta decay”) and have almost no risk from overnight price changes. See: https://www.investopedia.com/terms/t/time-decay.asp.
+     – Financial industry articles (e.g., pieces on zero days-to-expiration trading on sites like Benzinga or The Options Institute) note that same‐day expiries avoid overnight gaps.
+   • CLAIM REFUTATION EVIDENCE:
+     – Some market experts note that although overnight risk is negligible, the intraday volatility remains high and can lead to significant risk if the market moves unexpectedly. For example, discussions on intraday risk on financial forums like Elite Trader emphasize that “minimal overnight risk” does not equal “minimal overall risk.” (Reference: discussions summarized on https://www.optionseducation.org/).
+   • LOGICAL FALLACIES:
+     – Oversimplification: “no time for second guessing” may understate intraday uncertainty.
+     – False dichotomy: Equating “minimal overnight risk” with overall low-risk might ignore other risk factors.
+   • CLAIM RATING:
+     – B (High)
+   • LABELS:
+     – Simplistic, Risk-Minimization, Partially Misleading
+
+─────────────────────────────
+
+2. CLAIM: A short put vertical spread caps losses while allowing premium collection.
+   • CLAIM SUPPORT EVIDENCE:
+     – Standard options trading theory (as explained on Investopedia’s Bull Put Spread page: https://www.investopedia.com/terms/b/bull-put-spread.asp) confirms that such spreads have a defined risk (capped loss) with the premium received.
+     – The Options Industry Council describes how spreads limit losses with a long put acting as a hedge.
+   • CLAIM REFUTATION EVIDENCE:
+     – Some analyses point out that although losses are capped, the risk relative to the premium can be significant if the market moves sharply. Articles on risk management in options (see options educational resources from the CBOE: https://www.cboe.com/education/) elaborate on these risk–reward nuances.
+   • LOGICAL FALLACIES:
+     – Oversimplification: Statement “caps losses” may neglect nuances in risk management.
+     – Generalization: It implies that outcomes are uniformly favorable if the market behaves as predicted.
+   • CLAIM RATING:
+     – C (Medium)
+   • LABELS:
+     – Simplistic, Generalization
+
+─────────────────────────────
+
+3. CLAIM: Alpaca enforces a 3:15 p.m. ET cutoff for submitting orders for broad-based ETFs.
+   • CLAIM SUPPORT EVIDENCE:
+     – Alpaca’s official documentation confirms specific order cutoffs to allow for proper auto-liquidation risk management. See: https://alpaca.markets/docs/api-documentation/ for details on trading cutoffs and risk controls.
+   • CLAIM REFUTATION EVIDENCE:
+     – There is minimal evidence refuting this, though trading platforms sometimes update policies. Independent trader reviews and community posts on Alpaca’s status pages (e.g., Alpaca’s blog or support forums) consistently mention these cutoffs.
+   • LOGICAL FALLACIES:
+     – None identified.
+   • CLAIM RATING:
+     – A (Definitely True)
+   • LABELS:
+     – Specific, Technical
+
+─────────────────────────────
+
+4. CLAIM: The provided code is only for demonstration and requires further adaptation before live trading.
+   • CLAIM SUPPORT EVIDENCE:
+     – Standard disclaimers in financial and algorithmic trading tutorials (as found on Investopedia and official broker educational resources) routinely note that example code is not production-ready.
+     – Alpaca’s own educational materials and risk disclosures consistently state that initial code examples are starting points for further testing.
+   • CLAIM REFUTATION EVIDENCE:
+     – There is little refutation since the advisory nature of educational content is common practice; independent experts (e.g., in academic journals or well‐established trading courses) advise rigorous backtesting and adaptation before live deployment.
+   • LOGICAL FALLACIES:
+     – None identified.
+   • CLAIM RATING:
+     – A (Definitely True)
+   • LABELS:
+     – Cautionary, Disclaimer
+
+─────────────────────────────
+
+OVERALL SCORE:
+   • LOWEST CLAIM SCORE: C
+   • HIGHEST CLAIM SCORE: A
+   • AVERAGE CLAIM SCORE: B
+
+─────────────────────────────
+
+OVERALL ANALYSIS:
+The argument is detailed and technically thorough, yet it occasionally oversimplifies risk aspects. Its strength lies in clear explanations; revising to deepen discussion of intraday risks could further refine its balance.
+------
+
 yt --transcript 'https://youtu.be/6wHA7tDBvwQ' | fabric -rp summarize
 
 ONE SENTENCE SUMMARY:
