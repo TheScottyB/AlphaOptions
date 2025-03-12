@@ -299,7 +299,11 @@ TAKEAWAYS:
 3. Backtesting reveals substantial profit differences between trading strategies.
 4. Risk management through stop loss and averaging down is critical.
 5. Investors should beware of trading aggressively against market trends.
+
+-------
+
 yt --transcript 'https://www.youtube.com/watch?v=xABvHplswmsQ' | fabric -rp extract_insights
+
 • Cautious market sentiment reflects deep uncertainties as economic indicators foreshadow potential downturn across sectors overall.  
 • Divergence in technical indicators signals caution, urging traders to reassess risk and adjust strategic positions.  
 • Embedded Fibonacci retracement levels reveal underlying market psychology and highlight expected price behavior shifts significantly.  
