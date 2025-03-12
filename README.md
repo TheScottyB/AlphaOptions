@@ -273,3 +273,39 @@ yt --transcript 'https://www.youtube.com/watch?v=8G4Ueaagfcg' | fabric -rp extra
 • Attend trading mentor sessions and live broadcasts to remain connected with expert market perspectives regularly.  
 • Experiment with varying technical indicators on scanner tools to discover effective triggers for entries frequently.  
 • Maintain discipline by accepting modest gains consistently rather than resorting to high-risk speculative trades always.
+
+-------
+
+yt --transcript 'https://www.youtube.com/watch?v=xABvHplswmsQ' | fabric -rp summarize
+ONE SENTENCE SUMMARY:
+S&P 500 and NASDAQ exhibit persistent downtrends with bearish divergences as technical backtesting shows volatile trade outcomes and investor sentiment.
+
+MAIN POINTS:
+1. S&P 500 and NASDAQ trends remain in a pronounced downtrend.
+2. Backtesting analysis includes profit simulations using average down approaches versus stop loss.
+3. Bearish divergence identified through CCI indicator across multiple chart timeframes.
+4. Fibonacci retracement levels pinpoint key target areas for price correction.
+5. Weekly, daily, and hourly charts consistently signal a bearish market environment.
+6. Investor sentiment suffers amid recession fears and impacts from tariff policies.
+7. Corporate earnings forecasts remain positive despite underlying market volatility concerns.
+8. Trading outcomes vary between stop loss and average down strategies.
+9. Short trades triggered when price and CCI break below moving averages.
+10. Technical analysis advises caution when countering prevailing market downtrends.
+
+TAKEAWAYS:
+1. Technical signals strongly indicate continued market bearishness.
+2. Divergences in indicators warn of potential downward corrections.
+3. Backtesting reveals substantial profit differences between trading strategies.
+4. Risk management through stop loss and averaging down is critical.
+5. Investors should beware of trading aggressively against market trends.
+yt --transcript 'https://www.youtube.com/watch?v=xABvHplswmsQ' | fabric -rp extract_insights
+• Cautious market sentiment reflects deep uncertainties as economic indicators foreshadow potential downturn across sectors overall.  
+• Divergence in technical indicators signals caution, urging traders to reassess risk and adjust strategic positions.  
+• Embedded Fibonacci retracement levels reveal underlying market psychology and highlight expected price behavior shifts significantly.  
+• Average down trading approach demonstrates potential profit opportunities despite fluctuating market conditions and evolving trends.  
+• Strategically integrating stop-loss measures mitigates risks while capturing gains amid volatile and unpredictable market movements.  
+• Backtesting historical trading models refines future strategies, aligning technical analysis with dynamic market realities successfully.  
+• Bearish divergence across multiple time frames emphasizes the significance of consistency in risk evaluation protocols.  
+• Bullish divergences in shorter terms ignite temporary optimism, yet caution remains vital amid overextended trends.  
+• Observing technical indicators provides profound insights into market sentiment, offering clues for adaptive trading strategies.  
+• Integrating technical analysis with sentiment analytics bridges human intuition and algorithmic precision for market navigation.
