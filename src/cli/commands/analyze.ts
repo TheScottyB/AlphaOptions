@@ -2,6 +2,8 @@ import chalk from 'chalk'
 import ora from 'ora'
 import { getStrategy, STRATEGY_DEFINITIONS } from '../../strategies/definitions.js'
 import { StrategyAnalyzer } from '../../strategies/analyzer.js'
+import { createOptionsDataClientFromEnv } from '../../alpaca/options-data.js'
+import { selectContract, toOptionContract, toGreeks } from '../../agent/contract-selector.js'
 import type { Greeks, OptionContract } from '../../types/options.js'
 import type { StrategyName, StrategyRecommendation } from '../../types/strategies.js'
 
@@ -20,12 +22,12 @@ const recommendationColors: Record<StrategyRecommendation, (s: string) => string
   strong_avoid: chalk.red.bold,
 }
 
-const recommendationEmoji: Record<StrategyRecommendation, string> = {
-  strong_buy: '🚀',
-  buy: '✅',
-  hold: '🤔',
-  avoid: '⚠️',
-  strong_avoid: '🛑',
+const recommendationLabels: Record<StrategyRecommendation, string> = {
+  strong_buy: '>>',
+  buy: '+',
+  hold: '~',
+  avoid: '!',
+  strong_avoid: 'X',
 }
 
 export async function analyzeCommand(symbol: string, options: AnalyzeOptions): Promise<void> {
@@ -40,11 +42,21 @@ export async function analyzeCommand(symbol: string, options: AnalyzeOptions): P
       return
     }
 
-    spinner.text = `Analyzing ${symbol} @ $${underlyingPrice.toFixed(2)}`
+    spinner.text = `Fetching 0DTE option chain for ${symbol} @ $${underlyingPrice.toFixed(2)}`
+
+    // Fetch real 0DTE option chain from Alpaca data API
+    const optionsClient = createOptionsDataClientFromEnv()
+    const chain0DTE = await optionsClient.get0DTEOptions(symbol.toUpperCase())
+    const hasRealData = chain0DTE.length > 0
+
+    if (!hasRealData) {
+      spinner.warn(`No 0DTE options found for ${symbol} today - using estimated data`)
+    } else {
+      spinner.text = `Analyzing ${symbol} @ $${underlyingPrice.toFixed(2)} (${chain0DTE.length} contracts)`
+    }
 
     const volatility = options.volatility ?? 'normal'
 
-    // Determine which strategies to analyze
     let strategiesToAnalyze: StrategyName[]
 
     if (options.strategy) {
@@ -56,7 +68,6 @@ export async function analyzeCommand(symbol: string, options: AnalyzeOptions): P
       }
       strategiesToAnalyze = [name]
     } else {
-      // Analyze top 5 strategies for this scenario
       strategiesToAnalyze = [
         'long_call_stock',
         'long_put_stock',
@@ -69,37 +80,53 @@ export async function analyzeCommand(symbol: string, options: AnalyzeOptions): P
     spinner.succeed('Analysis complete')
     console.log()
 
-    // Print header
+    const dataSource = hasRealData ? 'LIVE' : 'ESTIMATED'
     console.log(chalk.bold(`  ${symbol.toUpperCase()} Analysis`))
-    console.log(chalk.dim(`  Price: $${underlyingPrice.toFixed(2)} | Volatility: ${volatility}`))
+    console.log(chalk.dim(`  Price: $${underlyingPrice.toFixed(2)} | Volatility: ${volatility} | Data: ${dataSource}`))
     console.log(chalk.dim('  ' + '─'.repeat(50)))
     console.log()
 
     const analyzer = new StrategyAnalyzer({
       underlyingPrice,
-      riskFreeRate: 0.05, // 5% risk-free rate
+      riskFreeRate: 0.05,
       impliedVolatility: volatility === 'high' ? 0.4 : volatility === 'low' ? 0.15 : 0.25,
-      timeToExpiry: 0.0027, // ~1 hour for 0DTE
+      timeToExpiry: 0.0027,
     })
 
     for (const stratName of strategiesToAnalyze) {
       const strategy = getStrategy(stratName)
 
-      // Generate mock contracts based on strategy
-      const contracts = generateMockContracts(strategy.legs, underlyingPrice)
-      const greeks = generateMockGreeks(strategy.legs, volatility)
+      let contracts: OptionContract[]
+      let greeks: Greeks[]
+
+      if (hasRealData) {
+        const selectedContracts = strategy.legs.map((leg) =>
+          selectContract(chain0DTE, leg, underlyingPrice)
+        )
+
+        if (selectedContracts.some((c) => c == null)) {
+          console.log(`  ${chalk.white.bold(strategy.displayName)} ${chalk.dim('(skipped - no matching contracts)')}`)
+          console.log(chalk.dim('  ' + '─'.repeat(50)))
+          console.log()
+          continue
+        }
+
+        contracts = selectedContracts.map((c) => toOptionContract(c!))
+        greeks = selectedContracts.map((c) => toGreeks(c!))
+      } else {
+        contracts = generateEstimatedContracts(strategy.legs, symbol, underlyingPrice)
+        greeks = generateEstimatedGreeks(strategy.legs, volatility)
+      }
 
       const analysis = analyzer.analyze(strategy, contracts, greeks, volatility)
 
-      // Display results
       const colorFn = recommendationColors[analysis.recommendation]
-      const emoji = recommendationEmoji[analysis.recommendation]
+      const label = recommendationLabels[analysis.recommendation]
 
-      console.log(`  ${chalk.white.bold(strategy.displayName)} ${emoji}`)
+      console.log(`  ${chalk.white.bold(strategy.displayName)} [${label}]`)
       console.log(chalk.dim(`  ${strategy.description}`))
       console.log()
 
-      // Risk profile
       console.log(chalk.cyan('  Risk Profile:'))
       console.log(`    Max Loss:   ${chalk.red('$' + analysis.riskProfile.maxLoss.toFixed(2))}`)
       console.log(
@@ -112,13 +139,21 @@ export async function analyzeCommand(symbol: string, options: AnalyzeOptions): P
 
       const breakeven = analysis.riskProfile.breakeven
       if (Array.isArray(breakeven)) {
-        console.log(`    Breakeven:  ${chalk.yellow(`$${breakeven[0].toFixed(2)} / $${breakeven[1].toFixed(2)}`)}`)
+        console.log(`    Breakeven:  ${chalk.yellow(`$${(breakeven[0] ?? 0).toFixed(2)} / $${(breakeven[1] ?? 0).toFixed(2)}`)}`)
       } else {
         console.log(`    Breakeven:  ${chalk.yellow('$' + breakeven.toFixed(2))}`)
       }
+
+      if (hasRealData) {
+        console.log()
+        console.log(chalk.cyan('  Contracts:'))
+        for (const contract of contracts) {
+          const legType = contract.optionType.toUpperCase()
+          console.log(`    ${legType} $${contract.strikePrice} @ $${contract.premium.toFixed(2)}`)
+        }
+      }
       console.log()
 
-      // Greeks
       console.log(chalk.cyan('  Net Greeks:'))
       console.log(`    Delta: ${formatGreek(analysis.greeks.netDelta)}`)
       console.log(`    Gamma: ${formatGreek(analysis.greeks.netGamma)}`)
@@ -126,7 +161,6 @@ export async function analyzeCommand(symbol: string, options: AnalyzeOptions): P
       console.log(`    Vega:  ${formatGreek(analysis.greeks.netVega)}`)
       console.log()
 
-      // Recommendation
       console.log(`  Recommendation: ${colorFn(analysis.recommendation.replace(/_/g, ' ').toUpperCase())}`)
       console.log(`  Est. Margin:    $${analysis.margin.toFixed(2)}`)
       console.log()
@@ -134,9 +168,8 @@ export async function analyzeCommand(symbol: string, options: AnalyzeOptions): P
       console.log()
     }
 
-    // Footer
     console.log(chalk.dim('  Disclaimer: Analysis is for educational purposes only.'))
-    console.log(chalk.dim('  "The provided code is only for demonstration."'))
+    console.log(chalk.dim('  0DTE options carry significant risk. Use paper trading first.'))
     console.log()
   } catch (error) {
     spinner.fail('Analysis failed')
@@ -145,25 +178,38 @@ export async function analyzeCommand(symbol: string, options: AnalyzeOptions): P
 }
 
 async function fetchPrice(symbol: string): Promise<number> {
-  // In a real implementation, this would fetch from Alpaca or another data source
-  // For now, return mock prices for common symbols
-  const mockPrices: Record<string, number> = {
-    SPY: 505.25,
-    QQQ: 435.80,
-    AAPL: 175.50,
-    TSLA: 177.25,
-    NVDA: 880.00,
-    MSFT: 415.75,
-    AMZN: 178.50,
-    META: 505.00,
-    GOOGL: 152.30,
+  const apiKey = process.env['ALPACA_API_KEY']
+  const secretKey = process.env['ALPACA_SECRET_KEY']
+
+  if (!apiKey || !secretKey) {
+    throw new Error('Missing Alpaca credentials. Set ALPACA_API_KEY and ALPACA_SECRET_KEY.')
   }
 
-  return mockPrices[symbol.toUpperCase()] ?? 100
+  const response = await fetch(
+    `https://data.alpaca.markets/v2/stocks/${symbol.toUpperCase()}/snapshot`,
+    {
+      headers: {
+        'APCA-API-KEY-ID': apiKey,
+        'APCA-API-SECRET-KEY': secretKey,
+      },
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(`Price fetch failed for ${symbol}: ${response.status}`)
+  }
+
+  const data = (await response.json()) as { latestTrade?: { p?: number } }
+  const price = data.latestTrade?.p
+  if (price == null) {
+    throw new Error(`No trade data available for ${symbol}`)
+  }
+  return price
 }
 
-function generateMockContracts(
+function generateEstimatedContracts(
   legs: { side: 'long' | 'short'; optionType: 'call' | 'put'; strikeOffset: string | number }[],
+  symbol: string,
   underlyingPrice: number
 ): OptionContract[] {
   return legs.map((leg) => {
@@ -175,21 +221,21 @@ function generateMockContracts(
     } else if (leg.strikeOffset === 'otm_low') {
       strike = Math.round(underlyingPrice * 0.98)
     } else if (leg.strikeOffset === 'itm') {
-      strike = leg.optionType === 'call'
-        ? Math.round(underlyingPrice * 0.98)
-        : Math.round(underlyingPrice * 1.02)
+      strike =
+        leg.optionType === 'call'
+          ? Math.round(underlyingPrice * 0.98)
+          : Math.round(underlyingPrice * 1.02)
     } else {
       strike = Math.round(underlyingPrice)
     }
 
-    // Mock premium based on moneyness
     const moneyness = Math.abs(strike - underlyingPrice) / underlyingPrice
-    const basePremium = underlyingPrice * 0.01 // 1% of underlying
+    const basePremium = underlyingPrice * 0.01
     const premium = Math.max(0.05, basePremium * (1 - moneyness * 5))
 
     return {
-      symbol: `${symbol}MOCK`,
-      underlyingSymbol: 'MOCK',
+      symbol: `${symbol.toUpperCase()}EST`,
+      underlyingSymbol: symbol.toUpperCase(),
       underlyingType: 'stock' as const,
       optionType: leg.optionType,
       strikePrice: strike,
@@ -200,7 +246,7 @@ function generateMockContracts(
   })
 }
 
-function generateMockGreeks(
+function generateEstimatedGreeks(
   legs: { side: 'long' | 'short'; optionType: 'call' | 'put' }[],
   volatility: 'low' | 'normal' | 'high'
 ): Greeks[] {
@@ -213,8 +259,8 @@ function generateMockGreeks(
     return {
       delta: 0.5 * sign * callSign,
       gamma: 0.05 * Math.abs(sign) * volMultiplier,
-      theta: -0.15 * sign * volMultiplier, // Theta is negative for long positions
-      vega: 0.10 * sign * volMultiplier,
+      theta: -0.15 * sign * volMultiplier,
+      vega: 0.1 * sign * volMultiplier,
     }
   })
 }

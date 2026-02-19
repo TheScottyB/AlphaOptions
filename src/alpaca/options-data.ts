@@ -27,11 +27,11 @@ export interface OptionContractData {
   last: number
   volume: number
   openInterest: number
-  delta?: number
-  gamma?: number
-  theta?: number
-  vega?: number
-  impliedVolatility?: number
+  delta?: number | undefined
+  gamma?: number | undefined
+  theta?: number | undefined
+  vega?: number | undefined
+  impliedVolatility?: number | undefined
 }
 
 export class OptionsDataClient {

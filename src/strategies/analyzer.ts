@@ -1,4 +1,4 @@
-import Decimal from 'decimal.js'
+import { Decimal } from 'decimal.js'
 import type { Greeks, OptionContract, RiskProfile } from '../types/options.js'
 import type { Strategy, StrategyAnalysis, StrategyRecommendation } from '../types/strategies.js'
 
