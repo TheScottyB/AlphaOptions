@@ -40,12 +40,20 @@ export const TRADING_CONSTRAINTS = {
 } as const
 
 /**
+ * Get current Eastern Time hours and minutes from a Date.
+ * Handles EST/EDT transitions correctly via Intl.
+ */
+function getETTime(now: Date = new Date()): { hour: number; minute: number } {
+  const etString = now.toLocaleString('en-US', { timeZone: 'America/New_York' })
+  const etDate = new Date(etString)
+  return { hour: etDate.getHours(), minute: etDate.getMinutes() }
+}
+
+/**
  * Check if we're within trading hours
  */
 export function isWithinTradingHours(now: Date = new Date()): boolean {
-  // Convert to ET (simplified - production should use proper timezone lib)
-  const etHour = now.getUTCHours() - 5 // Rough ET offset
-  const etMinute = now.getUTCMinutes()
+  const { hour: etHour, minute: etMinute } = getETTime(now)
 
   const { marketOpen, marketClose } = TRADING_CONSTRAINTS
 
@@ -62,8 +70,7 @@ export function isWithinTradingHours(now: Date = new Date()): boolean {
  * Check if we can still submit 0DTE orders for broad-based ETFs
  */
 export function canSubmitETFOrder(now: Date = new Date()): boolean {
-  const etHour = now.getUTCHours() - 5
-  const etMinute = now.getUTCMinutes()
+  const { hour: etHour, minute: etMinute } = getETTime(now)
 
   const { etfOrderCutoff } = TRADING_CONSTRAINTS
 
@@ -74,12 +81,11 @@ export function canSubmitETFOrder(now: Date = new Date()): boolean {
 }
 
 /**
- * Get time until next market event
+ * Get time until next market event (in milliseconds)
  */
 export function getTimeUntilCutoff(cutoffType: 'etf' | 'exercise' | 'close'): number {
   const now = new Date()
-  const etHour = now.getUTCHours() - 5
-  const etMinute = now.getUTCMinutes()
+  const { hour: etHour, minute: etMinute } = getETTime(now)
 
   const cutoffs = {
     etf: TRADING_CONSTRAINTS.etfOrderCutoff,
@@ -90,5 +96,5 @@ export function getTimeUntilCutoff(cutoffType: 'etf' | 'exercise' | 'close'): nu
   const target = cutoffs[cutoffType]
   const minutesUntil = (target.hour - etHour) * 60 + (target.minute - etMinute)
 
-  return Math.max(0, minutesUntil * 60 * 1000) // Return milliseconds
+  return Math.max(0, minutesUntil * 60 * 1000)
 }
