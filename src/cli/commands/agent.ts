@@ -2,6 +2,7 @@ import chalk from 'chalk'
 import { TradingAgent } from '../../agent/trading-agent.js'
 import { DEFAULT_AGENT_CONFIG } from '../../agent/config.js'
 import type { AgentConfig } from '../../agent/config.js'
+import { getStrategy } from '../../strategies/definitions.js'
 import type { StrategyName, StrategyRecommendation } from '../../types/strategies.js'
 
 interface AgentOptions {
@@ -20,6 +21,27 @@ interface AgentOptions {
 export async function agentCommand(options: AgentOptions): Promise<void> {
   console.log(chalk.bold('\n  AlphaOptions - 0DTE Trading Agent\n'))
 
+  // Parse and validate numeric options with safe defaults
+  const parsePositiveInt = (value: string | undefined, fallback: number, name: string): number => {
+    if (!value) return fallback
+    const parsed = Number.parseInt(value, 10)
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      console.error(chalk.red(`  Invalid ${name}: "${value}" - must be a positive integer. Using default: ${fallback}`))
+      return fallback
+    }
+    return parsed
+  }
+
+  const parsePct = (value: string | undefined, fallback: number, name: string): number => {
+    if (!value) return fallback
+    const parsed = Number.parseInt(value, 10)
+    if (Number.isNaN(parsed) || parsed < 1 || parsed > 500) {
+      console.error(chalk.red(`  Invalid ${name}: "${value}" - must be 1-500. Using default: ${fallback}`))
+      return fallback
+    }
+    return parsed
+  }
+
   // Parse config from options
   const config: AgentConfig = {
     ...DEFAULT_AGENT_CONFIG,
@@ -29,12 +51,12 @@ export async function agentCommand(options: AgentOptions): Promise<void> {
     strategies: options.strategies
       ? (options.strategies.split(',').map((s) => s.trim()) as StrategyName[])
       : DEFAULT_AGENT_CONFIG.strategies,
-    scanIntervalMs: options.interval ? Number.parseInt(options.interval, 10) : DEFAULT_AGENT_CONFIG.scanIntervalMs,
-    maxPositions: options.maxPositions ? Number.parseInt(options.maxPositions, 10) : DEFAULT_AGENT_CONFIG.maxPositions,
-    maxDailyLoss: options.maxDailyLoss ? Number.parseInt(options.maxDailyLoss, 10) : DEFAULT_AGENT_CONFIG.maxDailyLoss,
-    maxPositionSize: options.maxContracts ? Number.parseInt(options.maxContracts, 10) : DEFAULT_AGENT_CONFIG.maxPositionSize,
-    stopLossPct: options.stopLoss ? Number.parseInt(options.stopLoss, 10) : DEFAULT_AGENT_CONFIG.stopLossPct,
-    takeProfitPct: options.takeProfit ? Number.parseInt(options.takeProfit, 10) : DEFAULT_AGENT_CONFIG.takeProfitPct,
+    scanIntervalMs: Math.max(10_000, parsePositiveInt(options.interval, DEFAULT_AGENT_CONFIG.scanIntervalMs, 'interval')),
+    maxPositions: Math.min(10, parsePositiveInt(options.maxPositions, DEFAULT_AGENT_CONFIG.maxPositions, 'max-positions')),
+    maxDailyLoss: parsePositiveInt(options.maxDailyLoss, DEFAULT_AGENT_CONFIG.maxDailyLoss, 'max-daily-loss'),
+    maxPositionSize: Math.min(10, parsePositiveInt(options.maxContracts, DEFAULT_AGENT_CONFIG.maxPositionSize, 'max-contracts')),
+    stopLossPct: parsePct(options.stopLoss, DEFAULT_AGENT_CONFIG.stopLossPct, 'stop-loss'),
+    takeProfitPct: parsePct(options.takeProfit, DEFAULT_AGENT_CONFIG.takeProfitPct, 'take-profit'),
     dryRun: options.dryRun ?? false,
     paper: !options.live, // Paper unless --live is explicitly set
   }
@@ -42,6 +64,27 @@ export async function agentCommand(options: AgentOptions): Promise<void> {
   // Safety: force paper mode unless --live is set
   if (!options.live) {
     config.paper = true
+  }
+
+  // Safety: reject credit strategies (e.g., short_put_vertical) - only debit strategies allowed
+  const creditStrategies = config.strategies.filter((name) => {
+    try {
+      const strat = getStrategy(name)
+      return !strat.isDebitOnly
+    } catch {
+      return false
+    }
+  })
+  if (creditStrategies.length > 0) {
+    console.error(chalk.red(`  Blocked credit strategies: ${creditStrategies.join(', ')}`))
+    console.error(chalk.red('  The agent only supports debit-only strategies (max loss = premium paid).'))
+    config.strategies = config.strategies.filter((name) => !creditStrategies.includes(name)) as StrategyName[]
+    if (config.strategies.length === 0) {
+      console.error(chalk.red('  No valid strategies remaining. Exiting.'))
+      return
+    }
+    console.log(chalk.yellow(`  Continuing with: ${config.strategies.join(', ')}`))
+    console.log()
   }
 
   // Display config summary
@@ -72,8 +115,11 @@ export async function agentCommand(options: AgentOptions): Promise<void> {
   // Create and start agent
   const agent = new TradingAgent(config)
 
-  // Graceful shutdown on SIGINT/SIGTERM
+  // Single graceful shutdown handler for SIGINT/SIGTERM
+  let shuttingDown = false
   const shutdown = async () => {
+    if (shuttingDown) return // Prevent double-shutdown
+    shuttingDown = true
     console.log(chalk.yellow('\n  Shutting down...'))
     await agent.stop()
     process.exit(0)
@@ -85,21 +131,10 @@ export async function agentCommand(options: AgentOptions): Promise<void> {
   try {
     await agent.start()
 
-    // Keep the process alive until the agent stops
-    await new Promise<void>((resolve) => {
-      const check = setInterval(() => {
-        // Agent will clear its own interval when done
-        // This just keeps the Node.js process alive
-      }, 5000)
-
-      process.on('SIGINT', () => {
-        clearInterval(check)
-        resolve()
-      })
-      process.on('SIGTERM', () => {
-        clearInterval(check)
-        resolve()
-      })
+    // Keep the process alive - the agent's internal intervals keep it running.
+    // This promise resolves only on shutdown signal.
+    await new Promise<void>(() => {
+      // Intentionally never resolves - process exits via shutdown handler above
     })
   } catch (error) {
     console.error(chalk.red(`  Agent error: ${error instanceof Error ? error.message : error}`))

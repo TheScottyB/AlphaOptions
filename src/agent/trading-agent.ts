@@ -31,6 +31,7 @@ export class TradingAgent {
   private intervalId: ReturnType<typeof setInterval> | null = null
   private eodTimeoutId: ReturnType<typeof setTimeout> | null = null
   private cycleCount = 0
+  private cycleInProgress = false
 
   constructor(config: AgentConfig) {
     this.config = config
@@ -119,7 +120,20 @@ export class TradingAgent {
 
   private async runCycle(): Promise<void> {
     if (!this.running) return
+    if (this.cycleInProgress) {
+      this.log('WARN', 'Previous cycle still in progress, skipping')
+      return
+    }
 
+    this.cycleInProgress = true
+    try {
+      await this.runCycleInner()
+    } finally {
+      this.cycleInProgress = false
+    }
+  }
+
+  private async runCycleInner(): Promise<void> {
     this.cycleCount++
     const now = new Date()
 
@@ -271,6 +285,12 @@ export class TradingAgent {
 
       const result = await this.client.submitOrder(order)
 
+      // Don't track if the order was immediately rejected
+      if (result.status === 'rejected') {
+        this.log('WARN', `Order rejected for ${order.symbol}`, { orderId: result.id, status: result.status })
+        return
+      }
+
       const stopLoss = midPrice * (1 - this.config.stopLossPct / 100)
       const takeProfit = midPrice * (1 + this.config.takeProfitPct / 100)
 
@@ -291,6 +311,7 @@ export class TradingAgent {
         stopLoss: stopLoss.toFixed(2),
         takeProfit: takeProfit.toFixed(2),
         orderId: result.id,
+        orderStatus: result.status,
       })
     } catch (err) {
       this.log('ERROR', `Order failed: ${err instanceof Error ? err.message : err}`)
@@ -339,7 +360,7 @@ export class TradingAgent {
     if (!canSubmitETFOrder(now)) {
       return 'Past 3:15 PM ET ETF cutoff'
     }
-    if (Math.abs(this.dailyPnL) >= this.config.maxDailyLoss) {
+    if (this.dailyPnL <= -this.config.maxDailyLoss) {
       return `Daily loss limit reached ($${this.dailyPnL.toFixed(2)})`
     }
     return null
